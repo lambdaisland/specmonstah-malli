@@ -2,7 +2,8 @@
   (:require [malli.generator :as mg]
             [reifyhealth.specmonstah.core :as sm]
             [clojure.data]
-            [malli.core :as m]))
+            [malli.core :as m]
+            [clojure.test.check.generators :as gen]))
 
 (def spec-gen-visit-key :spec-gen)
 
@@ -30,12 +31,15 @@
 
 (defn spec-gen-generate-ent-val
   "First pass function, uses spec to generate a val for every entity"
-  [db {:keys [ent-name]}]
-  (let [{:keys [schema]} (sm/ent-schema db ent-name)]
-    (def sss schema)
-    (def ooo *malli-opts*)
-    #_(prn schema)
-    (->> (mg/generate schema *malli-opts*)
+  [db {:keys [ent-name query-opts] :as ent}]
+  (let [schema (some :schema [query-opts (sm/ent-schema db ent-name)])
+        {:gen/keys [gen fmap elements]} query-opts
+        gen (cond->> (cond gen      gen
+                           elements (gen/elements elements)
+                           :else    (mg/generator schema *malli-opts*))
+              fmap
+              (gen/fmap fmap))]
+    (->> (mg/generate gen *malli-opts*)
          (reset-relations db ent-name))))
 
 (defn spec-gen-merge-overwrites
@@ -51,7 +55,6 @@
                                 (map keys)
                                 (apply into)
                                 (set))]
-    (prn merged)
     (with-meta merged {:overwritten changed-keys})))
 
 (defn assoc-relation

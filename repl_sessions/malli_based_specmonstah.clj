@@ -1,20 +1,43 @@
-# specmonstah-malli
+(ns repl-sessions.malli-based-specmonstah
+  (:require [lambdaisland.specmonstah.malli :as sm-malli]
+            [reifyhealth.specmonstah.core :as sm]
+            [arsproto.data.schema :as schema]
+            [malli.core :as m]
+            [malli.util :as mu]))
 
-<!-- badges -->
-<!-- [![CircleCI](https://circleci.com/gh/lambdaisland/specmonstah-malli.svg?style=svg)](https://circleci.com/gh/lambdaisland/specmonstah-malli) [![cljdoc badge](https://cljdoc.org/badge/lambdaisland/specmonstah-malli)](https://cljdoc.org/d/lambdaisland/specmonstah-malli) [![Clojars Project](https://img.shields.io/clojars/v/lambdaisland/specmonstah-malli.svg)](https://clojars.org/lambdaisland/specmonstah-malli) -->
-<!-- /badges -->
 
-Does what Specmonstah does with clojure.spec.alpha, but using Malli instead. WIP.
+(defn malli->specmonstah [schemas prefix ref id-field malli-opts]
+  (into {}
+        (for [[type schema] schemas]
+          [type {:prefix (prefix type)
+                 :schema schema
+                 :relations
+                 (into {} (keep (fn [[attr props schema]]
+                                  (when-let [ref (ref schema)]
+                                    [attr [ref id-field]]))
+                                (m/map-entries schema malli-opts)))}])))
 
-``` clojure
-(require '[lambdaisland.specmonstah.malli :as sm-malli]
-         '[reifyhealth.specmonstah.core :as sm])
+(def entity-schemas )
+
+
+(schema/into-schema (schema/schema uuid?) {} [:ars/address])
+
+(binding [schema/*ref-schema* (schema/schema uuid?)]
+  (-> (sm-malli/ent-db-spec-gen {:schema specmonstah-schema}  {:ars/transport [[1]]
+                                                               :ars/address [[3]]}
+                                (assoc (schema/malli-opts) :size 20))
+      (sm/attr-map :spec-gen)
+      vals
+      doall))
+
+(malli.generator/generate [:map {:datomic? true} [:address/name #:ui{:label {:de "Name"}} string?] [:address/street #:ui{:label {:de "Strasse"}} string?] [:address/country #:ui{:label {:de "Land"}} string?] [:address/zip #:ui{:label {:de "PLZ"}} string?] [:address/place #:ui{:label {:de "Ort"}} string?]])
 
 (def schema
   {:user {:prefix :u
           :schema [:map
                    [:foo/id uuid?]
-                   [:user/name string?]]}
+                   [:user/name string?]]
+          #_#_:constraints {:procflow.user/identity #{:uniq}}}
    :procedure {:prefix    :p
                :schema [:map
                         [:foo/id uuid?]
@@ -31,7 +54,6 @@ Does what Specmonstah does with clojure.spec.alpha, but using Malli instead. WIP
                                                  :step [[10]]})
     (sm/attr-map :spec-gen)
     vals)
-
 ;; => ({:foo/id #uuid "6bf6aa0b-edfc-4109-b797-93afc6e012d3",
 ;;      :procedure/id #uuid "b193342c-9a5f-47ec-9969-369b4dbd384f",
 ;;      :procflow.procedure/steps [#uuid "db508061-d3c6-45f2-acc1-4808bc401b90"],
@@ -55,15 +77,50 @@ Does what Specmonstah does with clojure.spec.alpha, but using Malli instead. WIP
 ;;     {:foo/id #uuid "e9e422b6-9585-4cf9-afb5-fff8c0944e16", :step/name "G"}
 ;;     {:foo/id #uuid "745d5557-9218-4286-a151-7f5eaf3ef335", :step/name ""}
 ;;     {:foo/id #uuid "1a037059-865a-4ee1-93cc-47798b116141", :user/name "7"})
-```
 
-Some extra stuff: `mall->specmonstah` takes a map from keyword to malli map
-spec, and returns a Specmonstah schema. Takes some parameterization because it
-can't guess how to find and resolve references.
 
-Here's an example:
 
-``` clojure
+
+(defn ref? [schema]
+  (if (vector? schema)
+    (or (= :procflow/ref (first schema))
+        (and (= :vector (first schema))
+             (= :procflow/ref (first (second schema)))))
+    false))
+
+(defn coll-schema? [schema]
+  (if (vector? schema)
+    (= :vector (first schema))
+    false))
+
+(defn flatten-schema [entities]
+  (for [[ent s] entities
+        [attr val] (next s)]
+    [ent attr val]))
+
+(defn reference [schema]
+  (if (coll-schema? schema)
+    (second (second schema))
+    (second schema)))
+
+(defn malli->specmonstah [entities]
+  (reduce
+   (fn [acc [ent attr schema]]
+     (cond-> acc
+       :->           (assoc-in [ent :prefix] (keyword (name ent)))
+       :->           (assoc-in [ent :schema] ent)
+       (ref? schema) (assoc-in [ent :relations attr] [(reference schema) :procflow/id])
+       (ref? schema) (assoc-in [ent :constraints attr] (if (coll-schema? schema)
+                                                         #{:coll :uniq}
+                                                         #{}))))
+   {}
+   (flatten-schema entities)))
+
+(malli->specmonstah {:user [:map
+                            [:id uuid?]
+                            [:profile [:procflow/ref :profile]]]})
+
+
 (def schemas
   '{:zoo/animal [:map
                  [:age pos-int?]
@@ -99,13 +156,3 @@ Here's an example:
 ;;     {:prefix :kind,
 ;;      :schema [:map [:kind/name string?] [:kind/family string?]],
 ;;      :relations {}}}
-```
-
-We also allow specifying `:gen/gen`, `:gen/elements`, and `:gen/fmap` in
-query-options, although this is perhaps of limited use.
-
-## License
-
-Copyright &copy; 2020 Arne Brasseur and Contributors
-
-Licensed under the term of the Mozilla Public License 2.0, see LICENSE.txt.
