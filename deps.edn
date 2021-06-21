@@ -3,7 +3,7 @@
          reifyhealth/specmonstah {:git/url "https://github.com/plexus/specmonstah"
                                   :sha     "382c8c9ced99f206065bff1523b2bf6242e1b187"}
          metosin/malli           {:git/url "https://github.com/metosin/malli.git"
-                                  :sha     "f8e3890e2d487bcc9ee8732567fa6dfa4b9504c0"}}
+                                  :sha     "81f38dda15e65efeda09e185d2938f298d4b6704"}}
  :aliases
  {:dev
   {}
