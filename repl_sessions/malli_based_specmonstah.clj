@@ -1,36 +1,8 @@
 (ns repl-sessions.malli-based-specmonstah
   (:require [lambdaisland.specmonstah.malli :as sm-malli]
             [reifyhealth.specmonstah.core :as sm]
-            [arsproto.data.schema :as schema]
             [malli.core :as m]
             [malli.util :as mu]))
-
-
-(defn malli->specmonstah [schemas prefix ref id-field malli-opts]
-  (into {}
-        (for [[type schema] schemas]
-          [type {:prefix (prefix type)
-                 :schema schema
-                 :relations
-                 (into {} (keep (fn [[attr props schema]]
-                                  (when-let [ref (ref schema)]
-                                    [attr [ref id-field]]))
-                                (m/map-entries schema malli-opts)))}])))
-
-(def entity-schemas )
-
-
-(schema/into-schema (schema/schema uuid?) {} [:ars/address])
-
-(binding [schema/*ref-schema* (schema/schema uuid?)]
-  (-> (sm-malli/ent-db-spec-gen {:schema specmonstah-schema}  {:ars/transport [[1]]
-                                                               :ars/address [[3]]}
-                                (assoc (schema/malli-opts) :size 20))
-      (sm/attr-map :spec-gen)
-      vals
-      doall))
-
-(malli.generator/generate [:map {:datomic? true} [:address/name #:ui{:label {:de "Name"}} string?] [:address/street #:ui{:label {:de "Strasse"}} string?] [:address/country #:ui{:label {:de "Land"}} string?] [:address/zip #:ui{:label {:de "PLZ"}} string?] [:address/place #:ui{:label {:de "Ort"}} string?]])
 
 (def schema
   {:user {:prefix :u
@@ -54,6 +26,9 @@
                                                  :step [[10]]})
     (sm/attr-map :spec-gen)
     vals)
+
+(sm-malli/malli->specmonstah )
+
 ;; => ({:foo/id #uuid "6bf6aa0b-edfc-4109-b797-93afc6e012d3",
 ;;      :procedure/id #uuid "b193342c-9a5f-47ec-9969-369b4dbd384f",
 ;;      :procflow.procedure/steps [#uuid "db508061-d3c6-45f2-acc1-4808bc401b90"],

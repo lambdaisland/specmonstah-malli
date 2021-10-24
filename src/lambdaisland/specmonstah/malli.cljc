@@ -104,8 +104,8 @@
    (-> (ent-db-spec-gen db query malli-opts)
        (sm/attr-map spec-gen-visit-key))))
 
-(defn malli->specmonstah
-  "Generate a Specmonstah schema map based on malli schemas.
+#_(defn malli->specmonstah
+    "Generate a Specmonstah schema map based on malli schemas.
 
   - `schemas` map from keyword (entity type) to malli map schema
   - `prefix` function to derive a specmonstah prefix from an entity type keyword
@@ -114,13 +114,13 @@
     this map attribute references another attribute. Returns falsy otherwise.
   - `id-field` field name for primary keys, keyword
   - `malli-opts` extra options to pass to malli"
-  [schemas prefix ref id-field malli-opts]
-  (into {}
-        (for [[type schema] schemas]
-          [type {:prefix (prefix type)
-                 :schema schema
-                 :relations
-                 (into {} (keep (fn [[attr props schema]]
-                                  (when-let [ref (ref schema)]
-                                    [attr [ref id-field]]))
-                                (m/map-entries schema malli-opts)))}])))
+    [schemas prefix ref id-field malli-opts]
+    (into {}
+          (for [[type schema] schemas]
+            [type {:prefix (prefix type)
+                   :schema schema
+                   :relations
+                   (into {} (keep (fn [[attr schema]]
+                                    (when-let [ref (ref schema)]
+                                      [attr [ref id-field]]))
+                                  (m/entries schema malli-opts)))}])))
