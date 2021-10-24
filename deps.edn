@@ -1,15 +1,14 @@
 {:paths ["src" "test" "resources"]
- :deps  {org.clojure/clojure     {:mvn/version "1.10.3"}
+ :deps  {org.clojure/clojure          {:mvn/version "1.10.3"}
          ;; Forked version based on 2.0.0 which cycles through ents when
          ;; building up references, rather than always reusing the same one. Not
          ;; strictly necessary but returns more varied data.
-         reifyhealth/specmonstah {:git/url "https://github.com/plexus/specmonstah"
-                                  :sha     "382c8c9ced99f206065bff1523b2bf6242e1b187"}
-         metosin/malli           {:mvn/version "0.6.2"}}
+         com.lambdaisland/specmonstah {:mvn/version "2.0.0.288"}
+         metosin/malli                {:mvn/version "0.6.2"}}
  :aliases
  {:dev
   {}
 
   :test
-  {:extra-deps {lambdaisland/kaocha {:mvn/version "RELEASE"}
+  {:extra-deps {lambdaisland/kaocha        {:mvn/version "1.60.945"}
                 nubank/matcher-combinators {:mvn/version "3.3.1"}}}}}
